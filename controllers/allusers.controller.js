@@ -19,7 +19,7 @@ exports.edit = async(req,res,next) => {
     try {
         const role = req.params.u_role;
         const id = req.params.u_id;
-        const list = await db("users").select("*").where("users.u_role",role).where("users.u_id",id)
+        const list = await db("users").select("*").where("users.u_role",role).where("users.u_id",id).first()
         res.status(201).json({
             success: true,
             message: "ดึงข้อมูลสำเร็จเรียบร้อย",

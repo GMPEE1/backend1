@@ -11,6 +11,6 @@ router.get("/list/:t_id/indicator", ctrl.listInd)
 router.get("/list/:t_id/indicator/:ind_id", ctrl.editInd)
 router.put("/list/:t_id/indicator/:ind_id", ctrl.updateInd)
 router.delete("/list/:t_id/indicator/:ind_id", ctrl.deleteInd)
-router.post("/list/t_id/indicator", ctrl.createInd)
+router.post("/list/:t_id/indicator", ctrl.createInd)
 
 module.exports = router;
