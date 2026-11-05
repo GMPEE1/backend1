@@ -1,0 +1,65 @@
+// controllers/auth.controller.js
+// เวอร์ชันสอนนักศึกษา: routes -> controller -> knex (ไม่มี repository ชั้นกลาง)
+
+const db = require("../db/knex");  // ใช้ knex ต่อ DB โดยตรง
+const jwt = require("jsonwebtoken");
+// const bcrypt = require("bcrypt");
+
+// ช่วย: เลือกฟิลด์ที่จะส่งกลับ (อย่าส่ง password_hash)
+const pickPublic = (row) =>
+  row && ({ u_id: row.u_id, u_name: row.u_name, u_email: row.u_email, u_role: row.u_role, u_pw_status: row.u_pw_status });
+
+/**
+ * POST /api/auth/login
+ * body: { email, password }
+ * 200: { success:true, accessToken, user:{ id,name,email,role } }
+ * 400: ข้อมูลไม่ครบ
+ * 401: อีเมล/รหัสผ่านไม่ถูกต้อง
+ */
+exports.login = async (req, res, next) => {
+  try {
+    const { u_email, u_password } = req.body || {};
+    if (!u_email || !u_password) {
+      return res
+        .status(400)
+        .json({ success: false, message: "email and password required" });
+    }
+
+    // 1) ค้นผู้ใช้จากอีเมล (ต้องดึง password_hash มาด้วย เพื่อตรวจรหัสผ่าน)
+    const user = await db("users")
+      .select("u_id", "u_name", "u_email", "u_password", "u_role", "u_pw_status")
+      .where({ u_email })
+      .first();
+
+    if (!user) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid credentials-email" });
+    }
+
+    // 2) เปรียบเทียบรหัสผ่าน
+    const ok = (u_password == user.u_password);
+    if (!ok) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid credentials-password" });
+    }
+
+    // 3) สร้าง JWT
+    const token = jwt.sign(
+      { u_id: user.u_id, u_role: user.u_role, u_name: user.u_name }, // payload
+      process.env.JWT_SECRET,                                // ความลับจาก .env
+      { expiresIn: process.env.JWT_EXPIRES || "1h" }         // อายุโทเค็น
+    );
+
+    // 4) ส่งผลลัพธ์ (อย่าส่ง password_hash ออกไป)
+    return res.json({
+      success: true,
+      accessToken: token,
+      user: pickPublic(user),
+    });
+  } catch (e) {
+    next(e); // ให้ error handler กลางจัดการ
+  }
+};
+// หมายเหตุ: ในระบบจริง ควรมีการล็อกกิจกรรมการล็อกอิน (login audit) ด้วย
