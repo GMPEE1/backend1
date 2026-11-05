@@ -18,6 +18,7 @@ exports.edit = async(req,res,next) => {
     try {
         const id = req.params.t_id;
         const list = await db("topic").select("*").where("topic.t_id",id).first()
+        if(!list) return res.status(404).json({ success: false,message: "ไม่พบข้อมูล"})
         res.status(201).json({
             success: true,
             message: "ดึงข้อมูลสำเร็จเรียบร้อย",
@@ -116,6 +117,7 @@ exports.editInd = async(req,res,next) => {
                 "score.score_max",
             )
             .where("indicator.ind_id",id).where("indicator.t_id",t_id).first()
+        if(!list) return res.status(404).json({ success: false,message: "ไม่พบข้อมูล"})
         res.status(201).json({
             success: true,
             message: "ดึงข้อมูลสำเร็จเรียบร้อย",

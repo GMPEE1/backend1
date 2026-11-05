@@ -20,6 +20,7 @@ exports.edit = async(req,res,next) => {
         const role = req.params.u_role;
         const id = req.params.u_id;
         const list = await db("users").select("*").where("users.u_role",role).where("users.u_id",id).first()
+        if(!list) return res.status(404).json({ success: false,message: "ไม่พบข้อมูล"})
         res.status(201).json({
             success: true,
             message: "ดึงข้อมูลสำเร็จเรียบร้อย",
