@@ -1,4 +1,12 @@
 const db = require("../db/knex");
+const path = require('path');
+
+function relFromUploads(absPath) {
+  // ให้ได้ path แบบ relative ต่อโฟลเดอร์ uploads และใช้ slash เดียว
+  return path
+    .relative(path.join(__dirname, '..', 'uploads'), absPath)
+    .replace(/\\/g, '/');
+}
 
 exports.list = async(req,res,next) => {
     try {
@@ -72,7 +80,7 @@ exports.create = async(req,res,next) => {
 exports.listInd = async(req,res,next) => {
     try {
         const t_id = req.params.t_id;
-        const topic = await db("topic").select("*").where("topic.t_id",t_id)
+        const topic = await db("topic").select("*").where("topic.t_id",t_id).first()
         const list = await db("indicator")
             .leftJoin(
                 "score",
@@ -82,6 +90,8 @@ exports.listInd = async(req,res,next) => {
             .select(
                 "indicator.ind_id",
                 "indicator.ind_name",
+                "indicator.detail",
+                "indicator.file",
                 "indicator.ind_score",
                 "score.score_step1",
                 "score.score_step2",
@@ -92,7 +102,7 @@ exports.listInd = async(req,res,next) => {
         res.status(201).json({
             success: true,
             message: "ดึงข้อมูลสำเร็จเรียบร้อย",
-            item: topic,list,
+            item: {topic,list},
             total: list.length
         })
     } catch (e) {
@@ -113,6 +123,8 @@ exports.editInd = async(req,res,next) => {
             .select(
                 "indicator.ind_id",
                 "indicator.ind_name",
+                "indicator.detail",
+                "indicator.file",
                 "indicator.ind_score",
                 "score.score_max",
             )
@@ -132,7 +144,7 @@ exports.updateInd = async(req,res,next) => {
     try {
         const id = req.params.ind_id;
         const t_id = req.params.t_id;
-        const { ind_name, ind_score, score_max } = req.body;
+        const { ind_name, ind_score, score_max, detail } = req.body;
         const score = {score_max};
 
         if(!ind_score == 0){
@@ -145,8 +157,11 @@ exports.updateInd = async(req,res,next) => {
             score.score_step3 = 0
         }
 
+        if (!req.file) return res.status(400).json({ success:false, message:'ไม่ได้ส่ง file มาด้วย' });
+        const file = relFromUploads(req.file.path);
+
         const update = await db.transaction(async (trx) => {
-            await trx("indicator").update({ind_name, ind_score}).where("indicator.ind_id",id).where("indicator.t_id",t_id)
+            await trx("indicator").update({ind_name, ind_score, detail, file}).where("indicator.ind_id",id).where("indicator.t_id",t_id)
             const sc_id = trx("indicator").select("indicator.sc_id").where("indicator.ind_id",id).where("indicator.t_id",t_id).first()
             await trx("score").update(score).where("score.sc_id",sc_id)
 
@@ -183,7 +198,7 @@ exports.deleteInd = async(req,res,next) => {
 exports.createInd = async(req,res,next) => {
     try {
         const t_id = req.params.t_id;
-        const { ind_name, ind_score, score_max } = req.body;
+        const { ind_name, ind_score, score_max, detail } = req.body;
         const score = {score_max};
 
         if(!ind_score == 0){
@@ -196,9 +211,12 @@ exports.createInd = async(req,res,next) => {
             score.score_step3 = 0
         }
 
+        if (!req.file) return res.status(400).json({ success:false, message:'ไม่ได้ส่ง file มาด้วย' });
+        const file = relFromUploads(req.file.path);
+
         const create = await db.transaction(async (trx) => {
             const sc_id = await trx("score").insert(score)
-            const indicator = await trx("indicator").insert({ind_name, ind_score, t_id, sc_id})
+            const indicator = await trx("indicator").insert({ind_name, ind_score, t_id, sc_id, detail, file})
 
             return indicator;
         }) 
