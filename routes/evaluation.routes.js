@@ -1,10 +1,7 @@
 const router = require('express').Router();
 const ctrl = require('../controllers/evaluation.controller');
 
-router.get("/list", ctrl.list)
-router.get("/list/:t_id", ctrl.edit)
-router.put("/list/:t_id", ctrl.update)
-router.delete("/list/:t_id", ctrl.delete)
+router.get("/list/:u_id", ctrl.list)
 router.post("/create", ctrl.create)
 
 module.exports = router;
